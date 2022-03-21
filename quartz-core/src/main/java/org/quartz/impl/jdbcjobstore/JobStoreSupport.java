@@ -144,21 +144,38 @@ public abstract class JobStoreSupport implements JobStore, Constants {
     private boolean acquireTriggersWithinLock = false;
     
     private long dbRetryInterval = 15000L; // 15 secs
-    
+
     private boolean makeThreadsDaemons = false;
 
     private boolean threadsInheritInitializersClassLoadContext = false;
     private ClassLoader initializersLoader = null;
-    
+
     private boolean doubleCheckLockMisfireHandler = true;
-    
+
     private final Logger log = LoggerFactory.getLogger(getClass());
-    
+
     private ThreadExecutor threadExecutor = new DefaultThreadExecutor();
-    
+
     private volatile boolean schedulerRunning = false;
     private volatile boolean shutdown = false;
-    
+
+    private long clusterNodeFailureMarkInterval = 15 * 1000L;
+
+    /**
+     * The period for which a non responding member in the cluster is marked as a failed node
+     * @return
+     */
+    public long getClusterNodeFailureMarkInterval() {
+        return clusterNodeFailureMarkInterval;
+    }
+
+    /**
+     * Set the value
+     * @param clusterNodeFailureMarkInterval - The interval mark on which a member is marked as a failure
+     */
+    public void setClusterNodeFailureMarkInterval(long clusterNodeFailureMarkInterval) {
+        this.clusterNodeFailureMarkInterval = clusterNodeFailureMarkInterval;
+    }
     /*
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      * 
@@ -3444,7 +3461,7 @@ public abstract class JobStoreSupport implements JobStore, Constants {
     
     protected long calcFailedIfAfter(SchedulerStateRecord rec) {
         return rec.getCheckinTimestamp() +
-            Math.max(rec.getCheckinInterval(), 
+            Math.max(Math.max(rec.getCheckinInterval(),getClusterNodeFailureMarkInterval()),
                     (System.currentTimeMillis() - lastCheckin)) +
             7500L;
     }
